@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Henrixounez Website API",
   "scripts": {
-    "start": "node dist/index.ts",
-    "postinstall": "tsc",
-    "watch-node": "nodemon dist/index.js",
+    "start": "node build/index.js",
+    "postinstall": "tsc --outDir build",
+    "watch-node": "nodemon build/index.js",
     "watch-ts": "tsc -w"
   },
   "dependencies": {

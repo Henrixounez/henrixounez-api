@@ -35,7 +35,6 @@ async function connect(ws: ws, req: Request, next: NextFunction) {
   const id = Switch.addToArray(ws);
 
   ws.on('message', (msg) => {
-    console.log(id);
     Switch.changeValue(msg === "true");
   });
 

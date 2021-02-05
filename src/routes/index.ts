@@ -1,5 +1,6 @@
 import * as ws from 'ws';
 import Switch from './switch';
+import Test from './test';
 import {Request, Response, NextFunction} from "express";
 
 export enum Method {
@@ -21,11 +22,16 @@ export interface RoutesTypeWS {
 }
 
 const crud: RoutesType[] = [
+  {
+    method: Method.GET,
+    route: "/test",
+    controller: Test.test
+  }
 ]
 
 const websockets: RoutesTypeWS[] = [
   {
-    route: "/test/connect",
+    route: "/switch/connect",
     controller: Switch.connect
   }
 ]

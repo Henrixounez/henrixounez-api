@@ -38,6 +38,10 @@ async function connect(ws: ws, req: Request, next: NextFunction) {
     Switch.removeClient(ws);
   });
 
+  ws.on('error', (err) => {
+    console.log('[WS] Error', err);
+  });
+
   Switch.addToArray(ws);
   ws.send(JSON.stringify({value: Switch.value}));
 }

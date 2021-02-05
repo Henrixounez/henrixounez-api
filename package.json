@@ -4,9 +4,11 @@
   "description": "Henrixounez Website API",
   "scripts": {
     "start": "node build/index.js",
+    "start-ts": "ts-node src/index.ts",
     "postinstall": "tsc --outDir build",
     "watch-node": "nodemon build/index.js",
-    "watch-ts": "tsc -w"
+    "watch-ts": "tsc -w",
+    "watch": "nodemon -e ts,tsx,js,jsx,graphql --watch src/ --exec npm run start-ts"
   },
   "dependencies": {
     "body-parser": "^1.19.0",

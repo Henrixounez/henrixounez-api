@@ -9,7 +9,8 @@ import routes from './routes';
 const appBase = express();
 appBase.use(cors());
 appBase.use(bodyParser.json());
-const { app } = expressWs(appBase);
+const wsInstance = expressWs(appBase);
+const { app } = wsInstance;
 
 routes.crud.forEach((route) => {
   app[route.method](
@@ -32,7 +33,12 @@ routes.websockets.forEach((route) => {
   )
 });
 
-
 app.listen(process.env.PORT || 8080, () => {
+  setInterval(() => {
+    wsInstance.getWss().clients.forEach((c) => {
+      c.ping();
+    });
+  }, 10000);
+  
   console.log(`[API] Listening to ${process.env.PORT || 8080}`);
 })

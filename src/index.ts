@@ -1,15 +1,15 @@
 require('dotenv').config();
 import * as express from "express";
-import * as enableWs from "express-ws";
+import * as expressWs from "express-ws";
 import {Request, Response, NextFunction} from "express";
 import * as cors from "cors";
 import * as bodyParser from "body-parser";
 import routes from './routes';
 
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-enableWs(app);
+const appBase = express();
+appBase.use(cors());
+appBase.use(bodyParser.json());
+const { app } = expressWs(appBase);
 
 routes.crud.forEach((route) => {
   app[route.method](
@@ -26,7 +26,7 @@ routes.crud.forEach((route) => {
 });
 
 routes.websockets.forEach((route) => {
-  app[route.method](
+  app.ws(
     route.route,
     route.controller,
   )

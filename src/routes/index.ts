@@ -7,7 +7,6 @@ export enum Method {
   POST = "post",
   DELETE = "delete",
   PUT = "put",
-  WS = "ws",
 }
 
 export interface RoutesType {
@@ -17,7 +16,6 @@ export interface RoutesType {
 }
 
 export interface RoutesTypeWS {
-  method: Method,
   route: string,
   controller: (ws: ws, req: Request, next: NextFunction) => Promise<any>,
 }
@@ -27,7 +25,6 @@ const crud: RoutesType[] = [
 
 const websockets: RoutesTypeWS[] = [
   {
-    method: Method.WS,
     route: "/test/connect",
     controller: Switch.connect
   }

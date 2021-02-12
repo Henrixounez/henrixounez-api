@@ -1,6 +1,7 @@
 import * as ws from 'ws';
 import Switch from './switch';
 import Test from './test';
+import Spotify from './spotify';
 import {Request, Response, NextFunction} from "express";
 
 export enum Method {
@@ -26,6 +27,21 @@ const crud: RoutesType[] = [
     method: Method.GET,
     route: "/test",
     controller: Test.test
+  },
+  {
+    method: Method.GET,
+    route: "/spotify/auth",
+    controller: Spotify.auth
+  },
+  {
+    method: Method.GET,
+    route: "/spotify/callback",
+    controller: Spotify.callback
+  },
+  {
+    method: Method.GET,
+    route: "/spotify/cities",
+    controller: Spotify.cities
   }
 ]
 

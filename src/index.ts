@@ -47,7 +47,7 @@ createConnection({
       "rejectUnauthorized": false
     }
   },
-  "entities": ["./src/entities/**/*"]
+  "entities": [process.env.NODE_ENV === "development" ? "./src/entities/**/*" : "./build/entities/**/*"]
 }).then(() => {
   app.listen(process.env.PORT || 8080, () => {
     setInterval(() => {

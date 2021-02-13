@@ -6,6 +6,14 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
 
   console.log('1');
   if (!Coding.isInit) {
+
+    ws.send(JSON.stringify({
+      type: 'init',
+      data: {
+        text: ''
+      }
+    }));
+
     console.log('2');
     await Coding.init();
     console.log('3');

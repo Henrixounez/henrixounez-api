@@ -5,6 +5,7 @@ import {Request, Response, NextFunction} from "express";
 import * as cors from "cors";
 import * as bodyParser from "body-parser";
 import routes from './routes';
+import { Connection, createConnection } from "typeorm";
 
 const appBase = express();
 appBase.use(cors());
@@ -33,12 +34,28 @@ routes.websockets.forEach((route) => {
   )
 });
 
-app.listen(process.env.PORT || 8080, () => {
-  setInterval(() => {
-    wsInstance.getWss().clients.forEach((c) => {
-      c.ping();
-    });
-  }, 10000);
-  
-  console.log(`[API] Listening to ${process.env.PORT || 8080}`);
-})
+export let typeormConnection: Connection;
+
+createConnection({
+  "type": 'postgres',
+  "url": process.env.DATABASE_URL,
+  "synchronize": true,
+  "logging": false,
+  "ssl": true,
+  "extra": {
+    "ssl": {
+      "rejectUnauthorized": false
+    }
+  },
+  "entities": ["./src/entities/**/*"]
+}).then(() => {
+  app.listen(process.env.PORT || 8080, () => {
+    setInterval(() => {
+      wsInstance.getWss().clients.forEach((c) => {
+        c.ping();
+      });
+    }, 10000);
+    
+    console.log(`[API] Listening to ${process.env.PORT || 8080}`);
+  })
+});

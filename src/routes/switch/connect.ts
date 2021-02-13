@@ -3,7 +3,7 @@ import * as ws from 'ws';
 import Switch from './Switch';
 
 export default async function connect(ws: ws, req: Request, next: NextFunction) {
-  const id = Switch.addToArray(ws);
+  const id = Switch.addClient(ws);
 
   ws.on('message', (msg) => {
     Switch.changeValue(msg === "true");

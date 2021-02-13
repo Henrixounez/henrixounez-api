@@ -1,9 +1,17 @@
-import {Request, Response, NextFunction} from "express";
+import { RoutesType, Method, RoutesTypeWS } from '../types';
+import test from './test';
 
-async function test(req: Request, res: Response, next: NextFunction) {
-  return "Hello World";
-}
+const crud: RoutesType[] = [
+  {
+    method: Method.GET,
+    route: "/test",
+    controller: test
+  },
+];
+
+const websockets: RoutesTypeWS[] = [];
 
 export default {
-  test
+  crud,
+  websockets
 };

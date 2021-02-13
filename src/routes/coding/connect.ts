@@ -4,11 +4,16 @@ import Coding from './Coding';
 
 export default async function connect(ws: ws, req: Request, next: NextFunction) {
 
+  console.log('1');
   if (!Coding.isInit) {
+    console.log('2');
     await Coding.init();
+    console.log('3');
   }
 
+  console.log('4');
   const id = Coding.addClient(ws);
+  console.log('5');
 
   ws.on('message', (msg) => {
     const data = JSON.parse(msg as string);
@@ -40,6 +45,8 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
     Coding.removeClient(id);
     Coding.sendToClients({type: 'removeClient', data: { id }});
   });
+  console.log('6');
+  console.log(Coding.text);
 
   ws.send(JSON.stringify({
     type: 'init',

@@ -7,10 +7,8 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
   if (!Coding.isInit) {
 
     ws.send(JSON.stringify({
-      type: 'init',
-      data: {
-        text: ''
-      }
+      type: 'ping',
+      data: {}
     }));
 
     await Coding.init();
@@ -22,7 +20,7 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
     const data = JSON.parse(msg as string);
     switch (data.type) {
       case 'addText':
-        Coding.addText(data.data.pos, data.data.text);
+        Coding.addText(data.data.pos, data.data.endPos, data.data.text);
         Coding.sendToClients(data, id);
         break;
       case 'delText':
@@ -30,8 +28,8 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
         Coding.sendToClients(data, id);
         break;
       case 'moveCursor':
-        const pos = Coding.moveClient(data.data.pos, id);
-        Coding.sendToClients({type: 'moveCursor', data: { id, pos }}, id);
+        const clientData = Coding.moveClient(data.data.pos, id);
+        Coding.sendToClients({type: 'moveCursor', data: clientData}, id);
         break;
       default:
         console.log('Message Type', data.type, 'is not handled');
@@ -52,7 +50,9 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
   ws.send(JSON.stringify({
     type: 'init',
     data: {
-      text: Coding.text
+      text: Coding.text,
+      clients: Coding.getClients(id),
+      owner: Coding.getClient(id),
     }
   }));
 }

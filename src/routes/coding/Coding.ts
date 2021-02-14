@@ -4,6 +4,8 @@ import { getRepository, Repository } from 'typeorm';
 import { File } from '../../entities/coding/File';
 
 interface Client {
+  id: number,
+  name: string,
   pos: {x: number, y: number},
 }
 
@@ -45,6 +47,8 @@ class CodingSession extends WsServer {
   addClient(c: ws) {
     const id = WsServer.prototype.addClient.call(this, c);
     const newClient: Client = {
+      id: id,
+      name: "#" + id,
       pos: {
         x: 0,
         y: 0
@@ -59,8 +63,16 @@ class CodingSession extends WsServer {
     delete this._codingClients[id];
   }
 
-  addText(pos: number, textAdd: string) {
-    this.setText(this._text.substr(0, pos) + textAdd + this._text.substr(pos));
+  getClient(requester: number) {
+    return this._codingClients[requester];
+  }
+  getClients(requester: number) {
+    return Object.keys(this._codingClients)
+      .map((e) => this._codingClients[Number(e)])
+      .filter((e: Client & {id: number}) => e.id !== requester);
+  }
+  addText(startPos: number, endPos: number, textAdd: string) {
+    this.setText(this._text.substr(0, startPos) + textAdd + this._text.substr(endPos));
   }
   delText(posStart: number, posEnd: number) {
     this.setText(this._text.substr(0, posStart) + this._text.substr(posEnd));
@@ -78,7 +90,7 @@ class CodingSession extends WsServer {
       }
     }
     this._codingClients[id].pos = { x, y };
-    return this._codingClients[id].pos;
+    return this._codingClients[id];
   }
 
   get text() {

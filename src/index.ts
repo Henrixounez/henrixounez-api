@@ -52,7 +52,8 @@ createConnection({
   app.listen(process.env.PORT || 8080, () => {
     setInterval(() => {
       wsInstance.getWss().clients.forEach((c) => {
-        c.ping();
+        if (c.readyState === c.OPEN)
+          c.ping();
       });
     }, 10000);
     

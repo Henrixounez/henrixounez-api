@@ -1,58 +1,95 @@
 import {Request, NextFunction} from "express";
 import * as ws from 'ws';
-import Coding from './Coding';
+import { getRepository } from 'typeorm';
+
+import { File } from '../../entities/coding/File';
+import { CodingSession, sessions } from "./Coding";
+
+async function findSession(sessionId: string) {
+  if (sessions[sessionId])
+    return { sessionId, session: sessions[sessionId] };
+  const _fileRepository = getRepository(File);
+  const file = await _fileRepository.findOne({ sessionId });
+  if (file)
+    return { sessionId, session: new CodingSession() };
+  return { sessionId: null, session: null };
+}
 
 export default async function connect(ws: ws, req: Request, next: NextFunction) {
 
-  if (!Coding.isInit) {
+  const querySessionId: string | null = (req.query?.sessionId as string) || null;
 
+  const { sessionId, session } = await findSession(querySessionId === null ? "default" : querySessionId);
+
+  if (session === null || sessionId === null) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      data: {
+        text: "SessionId is incorrect",
+      }
+    }));
+    ws.close();
+    return;
+  } else if (!session.isInit) {
     ws.send(JSON.stringify({
       type: 'ping',
       data: {}
     }));
-
-    await Coding.init();
+    await session.init(sessionId);
+    sessions[session.sessionId] = session;
   }
 
-  const id = Coding.addClient(ws);
+  const id = session.addClient(ws);
 
   ws.on('message', (msg) => {
-    const data = JSON.parse(msg as string);
-    switch (data.type) {
-      case 'addText':
-        Coding.addText(data.data.pos, data.data.endPos, data.data.text);
-        Coding.sendToClients(data, id);
+    const { type, data } = JSON.parse(msg as string);
+    switch (type) {
+      case 'change':
+        session.changeText(data);
+        session.sendToClients({ type, data }, id);
         break;
-      case 'delText':
-        Coding.delText(data.data.startPos, data.data.endPos);
-        Coding.sendToClients(data, id);
+      case 'cursorMove':
+        const cursorMoveClientData = session.moveClient(id, data);
+        session.sendToClients({ type, data: cursorMoveClientData }, id);
         break;
-      case 'moveCursor':
-        const clientData = Coding.moveClient(data.data.pos, id);
-        Coding.sendToClients({type: 'moveCursor', data: clientData}, id);
+      case 'nameChange':
+        const nameChangeClientData = session.changeNameClient(id, data);
+        session.sendToClients({ type, data: nameChangeClientData }, id);
         break;
       default:
-        console.log('Message Type', data.type, 'is not handled');
+        console.error("Unknown message type", type);
     }
   });
 
   ws.on('close', () => {
-    Coding.removeClient(id);
-    Coding.sendToClients({type: 'removeClient', data: { id }});
+    console.log('Closing', id);
+    session.removeClient(id);
+    session.sendToClients({type: 'removeClient', data: { id }});
+    if (session.clientAmount() <= 0 && session.sessionId !== "default") {
+      delete sessions[session.sessionId];
+    }
   });
 
   ws.on('error', (err) => {
     console.log('[WS] Error', err);
-    Coding.removeClient(id);
-    Coding.sendToClients({type: 'removeClient', data: { id }});
+    session.removeClient(id);
+    session.sendToClients({type: 'removeClient', data: { id }});
+    if (session.clientAmount() <= 0 && session.sessionId !== "default") {
+      delete sessions[session.sessionId];
+    }
   });
 
-  ws.send(JSON.stringify({
-    type: 'init',
-    data: {
-      text: Coding.text,
-      clients: Coding.getClients(id),
-      owner: Coding.getClient(id),
-    }
-  }));
+  if (ws.readyState === ws.OPEN) {
+    try {
+      ws.send(JSON.stringify({
+        type: 'init',
+        data: {
+          sessionId: session.sessionId,
+          text: await session.getText(),
+          me: session.getClient(id),
+          clients: session.getClients(id),
+        }
+      }));
+    } catch (e) {}
+  }
 }

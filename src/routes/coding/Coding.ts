@@ -3,29 +3,37 @@ import WsServer from '../WsServer';
 import { getRepository, Repository } from 'typeorm';
 import { File } from '../../entities/coding/File';
 
+interface TextChanges {
+  toAdd: string;
+  start: number;
+  end: number;
+}
 interface Client {
   id: number,
   name: string,
-  pos: {x: number, y: number},
+  pos: any,
 }
 
-class CodingSession extends WsServer {
+export class CodingSession extends WsServer {
   private _codingClients: {[key: number]: Client} = [];
   private _text: string = "";
   private _fileRepository: Repository<File>;
 
+  public sessionId: string;
   public isInit: boolean = false;
 
   constructor() {
     super();
   }
 
-  async init() {
+  async init(sessionId: string) {
     this._fileRepository = getRepository(File);
-    const file = await this._fileRepository.findOne();
+    this.sessionId = sessionId;
+    const file = await this._fileRepository.findOne({ sessionId });
     if (!file) {
       const newFile = new File();
-      newFile.text = "/* Hello World */";
+      newFile.text = "// Hello World";
+      newFile.sessionId = this.sessionId;
       this._text = newFile.text;
       await this._fileRepository.save(newFile);
     } else {
@@ -34,10 +42,21 @@ class CodingSession extends WsServer {
     this.isInit = true;
   }
 
-  async setText(newText: string) {
-    this._text = newText;
+  async getText() {
+    return this._text;
+  }
 
-    const file = await this._fileRepository.findOne();
+  applyChanges(lastText: string, changes: TextChanges) {
+    const startText = lastText.substring(0, changes.start);
+    const endText = lastText.substring(changes.end);
+    const updatedText = startText + changes.toAdd + endText;
+    return updatedText;
+  }
+  
+  async changeText(changes: TextChanges) {
+    this._text = this.applyChanges(this._text, changes);
+
+    const file = await this._fileRepository.findOne({ sessionId: this.sessionId });    
     if (file) {
       file.text = this._text;
       await this._fileRepository.save(file);
@@ -45,24 +64,27 @@ class CodingSession extends WsServer {
   }
 
   addClient(c: ws) {
-    const id = WsServer.prototype.addClient.call(this, c);
+    const id = super.addClient(c);
     const newClient: Client = {
       id: id,
       name: "#" + id,
       pos: {
-        x: 0,
-        y: 0
+        line: 0,
+        ch: 0,
+        sticky: "after"
       }
     };
     this._codingClients[id] = newClient;
     return id;
   }
 
+  clientAmount() {
+    return Object.keys(this._codingClients).length;
+  }
   removeClient(id: number) {
-    WsServer.prototype.removeClient.call(this, id);
+    super.removeClient(id);
     delete this._codingClients[id];
   }
-
   getClient(requester: number) {
     return this._codingClients[requester];
   }
@@ -71,31 +93,16 @@ class CodingSession extends WsServer {
       .map((e) => this._codingClients[Number(e)])
       .filter((e: Client & {id: number}) => e.id !== requester);
   }
-  addText(startPos: number, endPos: number, textAdd: string) {
-    this.setText(this._text.substr(0, startPos) + textAdd + this._text.substr(endPos));
-  }
-  delText(posStart: number, posEnd: number) {
-    this.setText(this._text.substr(0, posStart) + this._text.substr(posEnd));
-  }
-  moveClient(pos: number, id: number) {
-    let x = 0;
-    let y = 0;
-
-    for (let i = 0; i < pos; i++) {
-      if (this._text[i] === '\n') {
-        y++;
-        x = 0;
-      } else {
-        x++;
-      }
-    }
-    this._codingClients[id].pos = { x, y };
+  moveClient(id: number, data: any) {
+    this._codingClients[id].pos = data;
     return this._codingClients[id];
   }
-
-  get text() {
-    return this._text;
+  changeNameClient(id: number, name: string) {
+    this._codingClients[id].name = name;
+    return this._codingClients[id];
   }
 }
 
-export default new CodingSession()
+export const sessions: Record<string, CodingSession> = {
+  "default": new CodingSession(),
+}

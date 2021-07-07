@@ -1,7 +1,14 @@
-import { RoutesType, RoutesTypeWS } from '../types';
+import { Method, RoutesType, RoutesTypeWS } from '../types';
 import connect from './connect';
+import { createSession } from './controllers';
 
-const crud: RoutesType[] = [];
+const crud: RoutesType[] = [
+  {
+    method: Method.POST,
+    route: '/coding/create',
+    controller: createSession,
+  }
+];
 
 const websockets: RoutesTypeWS[] = [
   {

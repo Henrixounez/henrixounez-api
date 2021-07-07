@@ -1,6 +1,7 @@
 import * as ws from 'ws';
 import WsServer from '../WsServer';
 import { getRepository, Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 import { File } from '../../entities/coding/File';
 
 interface TextChanges {
@@ -10,12 +11,13 @@ interface TextChanges {
 }
 interface Client {
   id: number,
+  uuid: string,
   name: string,
   pos: any,
 }
 
 export class CodingSession extends WsServer {
-  private _codingClients: {[key: number]: Client} = [];
+  private _codingClients: Record<string, Client> = {};
   private _text: string = "";
   private _fileRepository: Repository<File>;
 
@@ -63,43 +65,48 @@ export class CodingSession extends WsServer {
     }
   }
 
-  addClient(c: ws) {
+  addCodingClient(c: ws) {
     const id = super.addClient(c);
+    const uuid = uuidv4();
     const newClient: Client = {
-      id: id,
-      name: "#" + id,
+      id,
+      uuid,
+      name: "#" + uuid,
       pos: {
         line: 0,
         ch: 0,
         sticky: "after"
       }
     };
-    this._codingClients[id] = newClient;
-    return id;
+    this._codingClients[uuid] = newClient;
+    return { uuid, id };
   }
 
   clientAmount() {
     return Object.keys(this._codingClients).length;
   }
-  removeClient(id: number) {
-    super.removeClient(id);
-    delete this._codingClients[id];
+  removeCodingClient(uuid: string) {
+    if (!this._codingClients[uuid])
+      return false;
+    super.removeClient(this._codingClients[uuid].id);
+    delete this._codingClients[uuid];
+    return true;
   }
-  getClient(requester: number) {
-    return this._codingClients[requester];
+  getClient(requester: string) {
+    return this._codingClients[requester]
   }
-  getClients(requester: number) {
+  getClients(requester: string) {
     return Object.keys(this._codingClients)
-      .map((e) => this._codingClients[Number(e)])
-      .filter((e: Client & {id: number}) => e.id !== requester);
+      .map((e) => this._codingClients[e])
+      .filter((e: Client) => e.uuid !== requester);
   }
-  moveClient(id: number, data: any) {
-    this._codingClients[id].pos = data;
-    return this._codingClients[id];
+  moveClient(uuid: string, data: any) {
+    this._codingClients[uuid].pos = data;
+    return this._codingClients[uuid];
   }
-  changeNameClient(id: number, name: string) {
-    this._codingClients[id].name = name;
-    return this._codingClients[id];
+  changeNameClient(uuid: string, name: string) {
+    this._codingClients[uuid].name = name;
+    return this._codingClients[uuid];
   }
 }
 

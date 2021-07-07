@@ -39,7 +39,7 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
     sessions[session.sessionId] = session;
   }
 
-  const id = session.addClient(ws);
+  const { id, uuid } = session.addCodingClient(ws);
 
   ws.on('message', (msg) => {
     const { type, data } = JSON.parse(msg as string);
@@ -49,11 +49,11 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
         session.sendToClients({ type, data }, id);
         break;
       case 'cursorMove':
-        const cursorMoveClientData = session.moveClient(id, data);
+        const cursorMoveClientData = session.moveClient(uuid, data);
         session.sendToClients({ type, data: cursorMoveClientData }, id);
         break;
       case 'nameChange':
-        const nameChangeClientData = session.changeNameClient(id, data);
+        const nameChangeClientData = session.changeNameClient(uuid, data);
         session.sendToClients({ type, data: nameChangeClientData }, id);
         break;
       default:
@@ -63,18 +63,20 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
 
   ws.on('close', () => {
     console.log('Closing', id);
-    session.removeClient(id);
+    const wasConnected = session.removeCodingClient(uuid);
     session.sendToClients({type: 'removeClient', data: { id }});
-    if (session.clientAmount() <= 0 && session.sessionId !== "default") {
+    if (wasConnected && session.clientAmount() <= 0 && session.sessionId !== "default") {
+      console.log('No more clients on', session.sessionId);
       delete sessions[session.sessionId];
     }
   });
 
   ws.on('error', (err) => {
     console.log('[WS] Error', err);
-    session.removeClient(id);
+    const wasConnected = session.removeCodingClient(uuid);
     session.sendToClients({type: 'removeClient', data: { id }});
-    if (session.clientAmount() <= 0 && session.sessionId !== "default") {
+    if (wasConnected && session.clientAmount() <= 0 && session.sessionId !== "default") {
+      console.log('No more clients on', session.sessionId);
       delete sessions[session.sessionId];
     }
   });
@@ -86,8 +88,8 @@ export default async function connect(ws: ws, req: Request, next: NextFunction) 
         data: {
           sessionId: session.sessionId,
           text: await session.getText(),
-          me: session.getClient(id),
-          clients: session.getClients(id),
+          me: session.getClient(uuid),
+          clients: session.getClients(uuid),
         }
       }));
     } catch (e) {}
